@@ -146,11 +146,126 @@ add_filter( 'the_content', function ( $content ) {
     if ( $fecha )     $items .= '<div class="exc-single-item"><strong>Fecha salida</strong><span>' . esc_html( date_i18n( 'd/m/Y', strtotime( $fecha ) ) ) . '</span></div>';
     if ( $duracion )  $items .= '<div class="exc-single-item"><strong>Duración</strong><span>' . esc_html( $duracion ) . ' días</span></div>';
 
+    // -- INICIO DEL NUEVO SISTEMA DE RESERVAS --
+    
+    // 1. Mensaje de éxito si viene de reservar
+    $mensaje = '';
+    if ( isset($_GET['reserva']) && $_GET['reserva'] == 'ok' ) {
+        $mensaje = '<div style="background:#d4edda; color:#155724; padding:15px; border-radius:8px; margin-top:20px; font-weight:bold;">✅ ¡Reserva realizada con éxito! Revisa la pestaña "Mis Reservas".</div>';
+    }
+
+    // 2. Botón de reserva (solo si está logueado)
+    $boton_reserva = '';
+    if ( is_user_logged_in() ) {
+        $boton_reserva .= '<form action="' . esc_url( admin_url('admin-post.php') ) . '" method="POST" style="margin-top: 28px;">';
+        $boton_reserva .= '<input type="hidden" name="action" value="crear_reserva">';
+        $boton_reserva .= '<input type="hidden" name="excursion_id" value="' . $post->ID . '">';
+        $boton_reserva .= wp_nonce_field( 'hacer_reserva_' . $post->ID, '_wpnonce', true, false );
+        
+        // El botón mantiene tu diseño y tu icono SVG
+        $boton_reserva .= '<button type="submit" class="exc-single-cta" style="border:none; cursor:pointer; width:100%; display:flex; justify-content:space-between; align-items:center;">Reservar plaza <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>';
+        
+        $boton_reserva .= '</form>';
+    } else {
+        $boton_reserva .= '<div style="margin-top: 28px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #0073aa;"><p style="margin:0;"><em>Debes <a href="' . wp_login_url(get_permalink()) . '">iniciar sesión</a> para poder reservar.</em></p></div>';
+    }
+
     if ( ! $items ) return $content;
 
     return $content
         . '<div class="exc-single-meta">' . $items . '</div>'
-        . '<a href="#reservar" class="exc-single-cta">Reservar plaza
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-           </a>';
+        . $boton_reserva
+        . $mensaje;
 } );
+
+//RESERVAS
+function shortcode_mis_reservas() {
+    if ( ! is_user_logged_in() ) {
+        return '<p>Debes iniciar sesión para ver tus reservas.</p>';
+    }
+
+    $current_user_id = get_current_user_id();
+
+    // Buscamos las reservas de este usuario
+    $query = new WP_Query(array(
+        'post_type'  => 'reservas',
+        'meta_query' => array(
+            array(
+                'key'   => '_reserva_usuario_id',
+                'value' => $current_user_id,
+            )
+        )
+    ));
+
+    if ( ! $query->have_posts() ) return '<p>No tienes reservas todavía.</p>';
+
+    $html = '<div class="mis-reservas-container">';
+    $html .= '<table style="width:100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">';
+    $html .= '<thead style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                <tr>
+                    <th style="padding: 15px; text-align: left;">Excursión</th>
+                    <th style="padding: 15px; text-align: left;">Fecha</th>
+                    <th style="padding: 15px; text-align: left;">Estado</th>
+                </tr>
+              </thead><tbody>';
+
+    while ( $query->have_posts() ) {
+        $query->the_post();
+        $exc_id = get_post_meta(get_the_ID(), '_reserva_excursion_id', true);
+        $estado = get_post_meta(get_the_ID(), '_reserva_estado', true);
+        $fecha  = get_the_date('d/m/Y');
+        
+        $color_estado = ($estado == 'confirmada') ? '#28a745' : (($estado == 'pendiente') ? '#ffc107' : '#dc3545');
+
+        $html .= '<tr style="border-bottom: 1px solid #eee;">';
+        $html .= '<td style="padding: 15px;"><strong>' . get_the_title($exc_id) . '</strong></td>';
+        $html .= '<td style="padding: 15px;">' . $fecha . '</td>';
+        $html .= '<td style="padding: 15px;"><span style="background:' . $color_estado . '; color:#fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; text-transform: uppercase;">' . $estado . '</span></td>';
+        $html .= '</tr>';
+    }
+
+    $html .= '</tbody></table></div>';
+    wp_reset_postdata();
+
+    return $html;
+}
+add_shortcode('mis_reservas', 'shortcode_mis_reservas');
+
+/* ════════════════════════════════════════════
+   6. PROCESAR LA RESERVA EN BACKEND
+   ════════════════════════════════════════════ */
+add_action( 'admin_post_crear_reserva', 'procesar_creacion_reserva' );
+function procesar_creacion_reserva() {
+    // Seguridad
+    if ( ! is_user_logged_in() ) wp_die('Debes iniciar sesión para hacer una reserva.');
+    
+    $excursion_id = isset($_POST['excursion_id']) ? intval($_POST['excursion_id']) : 0;
+    if ( ! isset($_POST['_wpnonce']) || ! wp_verify_nonce($_POST['_wpnonce'], 'hacer_reserva_' . $excursion_id) ) {
+        wp_die('Error de seguridad. Inténtalo de nuevo.');
+    }
+
+    $user_id = get_current_user_id();
+    $user_info = get_userdata($user_id);
+
+    // Creamos el post tipo "Reservas"
+    $reserva_data = array(
+        'post_title'  => 'Reserva: ' . get_the_title($excursion_id) . ' (' . $user_info->display_name . ')',
+        'post_type'   => 'reservas',
+        'post_status' => 'publish'
+    );
+
+    $reserva_id = wp_insert_post( $reserva_data );
+
+    // Si se crea bien, guardamos los metadatos y redirigimos
+    if ( ! is_wp_error( $reserva_id ) && $reserva_id > 0 ) {
+        update_post_meta( $reserva_id, '_reserva_excursion_id', $excursion_id );
+        update_post_meta( $reserva_id, '_reserva_usuario_id', $user_id );
+        update_post_meta( $reserva_id, '_reserva_estado', 'pendiente' );
+
+        // Devolvemos al usuario a la página de la excursión con el mensaje "?reserva=ok"
+        wp_redirect( add_query_arg('reserva', 'ok', get_permalink($excursion_id)) );
+        exit;
+    } else {
+        wp_die('Hubo un error al procesar tu reserva. Contacta con nosotros.');
+    }
+}

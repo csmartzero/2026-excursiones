@@ -16,3 +16,4 @@ require_once EXCURSIONES_DIR . 'includes/cpt.php';
 require_once EXCURSIONES_DIR . 'includes/taxonomias.php';
 require_once EXCURSIONES_DIR . 'includes/metabox.php';
 require_once EXCURSIONES_DIR . 'includes/frontend.php';
+require_once EXCURSIONES_DIR . 'includes/menu.php';
