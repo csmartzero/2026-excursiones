@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: Excursiones
-Description: Plugin para gestionar excursiones con tipos, ubicaciones y detalles como precio y plazas.
-Version: 6.0
+Description: Plugin para gestionar excursiones con tipos, ubicaciones, reservas y pago simulado con envío de confirmación PDF por email.
+Version: 7.0
 Author: Francisco Javier Montelongo Costas
 Text Domain: funciones-excursiones
 */
