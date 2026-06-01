@@ -11,8 +11,6 @@
         var search = qs('#exc-search');
         var grid   = qs('.exc-grid');
 
-        if (!grid) return;
-
         // Toggle visibility
         if (toggle && panel) {
             toggle.addEventListener('click', function () {
@@ -49,7 +47,7 @@
             });
         }
 
-        if (select) {
+        if (select && grid) {
             select.addEventListener('change', function () {
                 var val = select.value;
                 if (val === 'asc' || val === 'desc') sortGrid(val);
@@ -62,10 +60,44 @@
             return function () { var args = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, args); }, wait); };
         }
 
-        if (search) {
+        if (search && grid) {
             search.addEventListener('input', debounce(function (e) {
                 filterGrid(e.target.value);
             }, 200));
         }
+
+        function initReservaPrice() {
+            var pasajerosInput = qs('#exc-pasajeros');
+            var precioLabel = qs('#exc-price-display');
+            var totalLabel = qs('#exc-total-display');
+
+            if (!pasajerosInput || !precioLabel || !totalLabel) return;
+
+            var basePrice = parseFloat(precioLabel.dataset.basePrice || '0') || 0;
+
+            function actualizarPrecio() {
+                var cantidad = parseInt(pasajerosInput.value, 10);
+                if (isNaN(cantidad) || cantidad < 1) {
+                    cantidad = 1;
+                }
+                pasajerosInput.value = cantidad;
+
+                var total = basePrice * cantidad;
+                precioLabel.textContent = basePrice.toLocaleString('es-ES', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + ' €';
+                totalLabel.textContent = total.toLocaleString('es-ES', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + ' €';
+            }
+
+            pasajerosInput.addEventListener('input', actualizarPrecio);
+            pasajerosInput.addEventListener('change', actualizarPrecio);
+            actualizarPrecio();
+        }
+
+        initReservaPrice();
     });
 })();

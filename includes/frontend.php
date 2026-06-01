@@ -136,11 +136,22 @@ add_filter( 'the_content', function ( $content ) {
     if ( ! is_singular( 'excursiones' ) ) return $content;
 
     global $post;
+    if ( empty( $post ) || empty( $post->ID ) ) {
+        return $content;
+    }
+
     $precio    = get_post_meta( $post->ID, '_precio',            true );
     $max       = get_post_meta( $post->ID, '_max_participantes', true );
     $ubicacion = get_post_meta( $post->ID, '_ubicacion',         true );
     $fecha     = get_post_meta( $post->ID, '_fecha_salida',      true );
     $duracion  = get_post_meta( $post->ID, '_duracion_dias',     true );
+
+    $precio_val         = is_numeric( $precio ) && floatval( $precio ) > 0 ? floatval( $precio ) : 0;
+    $max_participantes  = is_numeric( $max ) && intval( $max ) > 0 ? intval( $max ) : 0;
+    $fecha_salida       = $fecha && strtotime( $fecha ) ? $fecha : '';
+    $fecha_formato      = $fecha_salida ? esc_html( date_i18n( 'd/m/Y', strtotime( $fecha_salida ) ) ) : '—';
+    $ubicacion_text     = $ubicacion ? esc_html( $ubicacion ) : '—';
+    $duracion_text      = $duracion ? esc_html( $duracion ) . ' días' : '—';
 
     // ── Tabla de metadatos ──
     $items = '';
@@ -166,81 +177,95 @@ add_filter( 'the_content', function ( $content ) {
     else {
         if ( is_user_logged_in() ) {
             $seccion_reserva .= '
-            <div style="margin-top:28px; padding:24px; background:#fdfdfd; border:1px solid #eaeaea; border-radius:16px; font-family:\'Outfit\', sans-serif;">
+            <div class="exc-single-page">
+                <div class="exc-single-page__inner">
+                    <div class="exc-single-booking-card">
+                        <h2 class="exc-single-booking-card__title">Datos de tu reserva</h2>'; 
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-                    <h3 style="margin:0; color:#17323a; font-family:\'Cormorant Garamond\', serif; font-size:26px;">📝 Datos de tu reserva</h3>
-                    <a href="' . esc_url( site_url('/mis-reservas/') ) . '" style="background:#17323a; color:#fff; padding:7px 16px; text-decoration:none; border-radius:50px; font-size:13px; font-weight:600;">📋 Mis reservas</a>
+            if ( $precio_val <= 0 ) {
+                $seccion_reserva .= '<div class="exc-single-warning" style="padding:20px; background:#fff4e5; border:1px solid #f5c27b; border-radius:16px; color:#4e3720; margin-bottom:24px; font-family:\'Outfit\',sans-serif;">No se ha configurado un precio válido para esta excursión. Contacta con el administrador para poder reservar.</div>';
+            }
+
+            $seccion_reserva .= '
+                        <form action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" method="POST" class="exc-single-booking-form">
+                            <input type="hidden" name="action" value="crear_reserva">
+                            <input type="hidden" name="excursion_id" value="' . $post->ID . '">
+
+                            <div class="exc-single-booking-table-wrapper">
+                                <table class="exc-single-booking-table">
+                                    <tbody>
+                                        <tr>
+                                            <th>Precio unitario</th>
+                                            <td><strong id="exc-price-display" data-base-price="' . esc_attr( $precio_val ) . '">' . number_format( $precio_val, 2, ',', '.' ) . ' €</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Nº Pasajeros</th>
+                                            <td><input id="exc-pasajeros" type="number" name="pasajeros" min="1" max="' . ( $max_participantes ? esc_attr( $max_participantes ) : '99' ) . '" value="1" required class="exc-single-input"></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Fecha de reserva</th>
+                                            <td><input type="date" name="fecha_reserva" required value="' . esc_attr( $fecha_salida ) . '" class="exc-single-input"></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total aproximado</th>
+                                            <td><strong id="exc-total-display">' . number_format( $precio_val, 2, ',', '.' ) . ' €</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Ubicación</th>
+                                            <td>' . $ubicacion_text . '</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Plazas</th>
+                                            <td>' . ( $max_participantes ? esc_html( $max_participantes ) . ' plazas' : '—' ) . '</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Duración</th>
+                                            <td>' . $duracion_text . '</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="exc-single-booking-extra">
+                                <label>
+                                    Hotel / Alojamiento
+                                    <input type="text" name="hotel" placeholder="Nombre del hotel" class="exc-single-input">
+                                </label>
+                                <label>
+                                    Nº habitación
+                                    <input type="text" name="habitacion" placeholder="Ej: 204" class="exc-single-input">
+                                </label>
+                                <label>
+                                    Punto de recogida
+                                    <input type="text" name="recogida" placeholder="Ej: Recepción principal del hotel" class="exc-single-input">
+                                </label>
+                                <label>
+                                    Nombre del titular *
+                                    <input type="text" name="nombre_completo" required placeholder="Nombre y apellidos" class="exc-single-input">
+                                </label>
+                                <label>
+                                    Teléfono (WhatsApp) *
+                                    <input type="tel" name="telefono" required placeholder="Ej: +34 600 000 000" class="exc-single-input">
+                                </label>
+                            </div>
+
+                            ' . wp_nonce_field( 'hacer_reserva_' . $post->ID, '_wpnonce', true, false ) . '
+
+                            <button type="submit" class="exc-single-cta" style="border:none; cursor:pointer; width:100%; justify-content:space-between; align-items:center; margin-top:16px; background:#17323a; color:#fff;">
+                                Confirmar reserva
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </button>
+                            <p style="text-align:center; font-size:12px; color:#a0998e; margin-top:12px; margin-bottom:0;">Tu reserva se procesará de inmediato.</p>
+                        </form>
+                    </div>
                 </div>
-
-                <form action="' . esc_url( admin_url('admin-post.php') ) . '" method="POST" style="display:flex; flex-direction:column; gap:14px;">
-                    <input type="hidden" name="action"       value="crear_reserva">
-                    <input type="hidden" name="excursion_id" value="' . $post->ID . '">
-
-                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:140px;">
-                            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Fecha de reserva *</label>
-                            <input type="date" name="fecha_reserva" required
-                                   value="' . esc_attr($fecha) . '"
-                                   style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                        </div>
-                        <div style="flex:1; min-width:120px;">
-                            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Nº Pasajeros *</label>
-                            <input type="number" name="pasajeros" min="1" max="' . ( $max ? esc_attr($max) : '99' ) . '" value="1" required
-                                   style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:140px;">
-                            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Hotel / Alojamiento</label>
-                            <input type="text" name="hotel" placeholder="Nombre del hotel"
-                                   style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                        </div>
-                        <div style="flex:1; min-width:100px;">
-                            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Nº Habitación</label>
-                            <input type="text" name="habitacion" placeholder="Ej: 204"
-                                   style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Punto de recogida</label>
-                        <input type="text" name="recogida" placeholder="Ej: Recepción principal del hotel"
-                               style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                    </div>
-
-                    <div style="border-top:1px dashed #ddd; padding-top:14px; margin-top:2px;">
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Nombre del titular *</label>
-                        <input type="text" name="nombre_completo" required placeholder="Nombre y apellidos"
-                               style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                    </div>
-
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px; color:#4b4540;">Teléfono (WhatsApp) *</label>
-                        <input type="tel" name="telefono" required placeholder="Ej: +34 600 000 000"
-                               style="width:100%; padding:9px 12px; border:1.5px solid #ddd; border-radius:8px; box-sizing:border-box;" />
-                    </div>
-
-                    ' . wp_nonce_field( 'hacer_reserva_' . $post->ID, '_wpnonce', true, false ) . '
-
-                    <button type="submit" class="exc-single-cta" style="border:none; cursor:pointer; width:100%; justify-content:space-between; align-items:center; margin-top:6px; background:#17323a; color:#fff;">
-                        Confirmar reserva
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                    </button>
-                    <p style="text-align:center; font-size:12px; color:#a0998e; margin-top:8px; margin-bottom:0;">Tu reserva se procesará de inmediato.</p>
-                </form>
             </div>';
         } else {
             $seccion_reserva .= '<div style="margin-top:28px; padding:16px 20px; background:#f8f9fa; border-radius:10px; border-left:4px solid #17323a; font-family:\'Outfit\', sans-serif;"><p style="margin:0;"><em>Debes <a href="' . wp_login_url(get_permalink()) . '">iniciar sesión</a> para realizar una reserva.</em></p></div>';
         }
     }
 
-    if ( ! $items ) return $content;
-
-    return $content
-        . '<div class="exc-single-meta">' . $items . '</div>'
-        . $seccion_reserva;
+    return $content . $seccion_reserva;
 } );
 
 /* ════════════════════════════════════════════

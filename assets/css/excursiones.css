@@ -456,6 +456,118 @@
     transform: translateX(4px);
 }
 
+.exc-single-page {
+    display: block !important;
+    width: 100% !important;
+    max-width: 760px !important;
+    margin: 40px auto 60px !important;
+    padding: 32px 16px 44px !important;
+    background: var(--exc-bg) !important;
+    box-sizing: border-box;
+}
+
+.exc-single-page__inner {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.exc-single-booking-card {
+    background: var(--exc-surface);
+    margin: 0 auto;
+    width: 100%;
+    border-radius: 28px;
+    box-shadow: var(--exc-shadow);
+    padding: 28px;
+}
+
+.exc-single-booking-card__title {
+    margin: 0 0 20px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    color: var(--exc-forest);
+}
+
+.exc-single-booking-table-wrapper {
+    overflow-x: auto;
+    border-radius: 22px;
+    background: transparent;
+}
+
+.exc-single-booking-table {
+    width: 100% !important;
+    min-width: 520px;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 24px;
+    background: var(--exc-surface);
+    border: 1px solid rgba(24, 21, 15, .10);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.exc-single-booking-table th,
+.exc-single-booking-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(24, 21, 15, .08);
+    vertical-align: middle;
+}
+
+.exc-single-booking-table th {
+    width: 40%;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--exc-ink-soft);
+}
+
+.exc-single-booking-table td {
+    font-size: 15px;
+    color: var(--exc-ink);
+}
+
+.exc-single-booking-table td strong {
+    font-size: 1.1rem;
+    color: var(--exc-forest);
+}
+
+.exc-single-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid rgba(24, 21, 15, .15);
+    border-radius: 14px;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    color: var(--exc-ink);
+}
+
+.exc-single-booking-extra {
+    display: grid;
+    gap: 14px;
+}
+
+.exc-single-booking-extra label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-weight: 600;
+    color: #4b4540;
+    font-size: 13px;
+}
+
+@media (max-width: 620px) {
+    .exc-single-booking-table th,
+    .exc-single-booking-table td {
+        padding: 12px 10px;
+    }
+}
+
 /* ════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════ */

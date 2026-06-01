@@ -2,7 +2,7 @@
 /*
 Plugin Name: Excursiones
 Description: Plugin para gestionar excursiones con tipos, ubicaciones, reservas y pago simulado con envío de confirmación PDF por email.
-Version: 7.0
+Version: 1.1
 Author: Francisco Javier Montelongo Costas
 Text Domain: funciones-excursiones
 */
@@ -16,4 +16,3 @@ require_once EXCURSIONES_DIR . 'includes/cpt.php';
 require_once EXCURSIONES_DIR . 'includes/taxonomias.php';
 require_once EXCURSIONES_DIR . 'includes/metabox.php';
 require_once EXCURSIONES_DIR . 'includes/frontend.php';
-require_once EXCURSIONES_DIR . 'includes/menu.php';
