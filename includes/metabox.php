@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
-///....................................................EXCURSIONES
+
 /* ── Registrar metabox ── */
 function excursiones_add_meta_box() {
     add_meta_box(
@@ -23,7 +23,6 @@ function excursiones_meta_box_callback( $post ) {
     $ubicacion = get_post_meta( $post->ID, '_ubicacion',        true );
     $fecha     = get_post_meta( $post->ID, '_fecha_salida',     true );
     $duracion  = get_post_meta( $post->ID, '_duracion_dias',    true );
-
     ?>
     <style>
         .exc-metabox { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 8px 0; }
@@ -34,28 +33,23 @@ function excursiones_meta_box_callback( $post ) {
     <div class="exc-metabox">
         <div>
             <label for="exc_precio">💶 Precio (€)</label>
-            <input type="number" step="0.01" min="0" id="exc_precio"
-                   name="precio" value="<?php echo esc_attr( $precio ); ?>" />
+            <input type="number" step="0.01" min="0" id="exc_precio" name="precio" value="<?php echo esc_attr( $precio ); ?>" />
         </div>
         <div>
             <label for="exc_max">👥 Máximo participantes</label>
-            <input type="number" min="1" id="exc_max"
-                   name="max_participantes" value="<?php echo esc_attr( $max ); ?>" />
+            <input type="number" min="1" id="exc_max" name="max_participantes" value="<?php echo esc_attr( $max ); ?>" />
         </div>
         <div>
             <label for="exc_fecha">📅 Fecha de salida</label>
-            <input type="date" id="exc_fecha"
-                   name="fecha_salida" value="<?php echo esc_attr( $fecha ); ?>" />
+            <input type="date" id="exc_fecha" name="fecha_salida" value="<?php echo esc_attr( $fecha ); ?>" />
         </div>
         <div>
             <label for="exc_duracion">⏱ Duración (días)</label>
-            <input type="number" min="1" id="exc_duracion"
-                   name="duracion_dias" value="<?php echo esc_attr( $duracion ); ?>" />
+            <input type="number" min="1" id="exc_duracion" name="duracion_dias" value="<?php echo esc_attr( $duracion ); ?>" />
         </div>
         <div class="full">
             <label for="exc_ubicacion">📍 Ubicación</label>
-            <input type="text" id="exc_ubicacion"
-                   name="ubicacion" value="<?php echo esc_attr( $ubicacion ); ?>" />
+            <input type="text" id="exc_ubicacion" name="ubicacion" value="<?php echo esc_attr( $ubicacion ); ?>" />
         </div>
     </div>
     <?php
@@ -86,14 +80,13 @@ function excursiones_guardar_meta( $post_id ) {
 }
 add_action( 'save_post', 'excursiones_guardar_meta' );
 
-///....................................................RESERVAS
 /* ── Registrar Metabox para Reservas ── */
 function reservas_add_meta_box() {
     add_meta_box(
         'reserva_detalles',
         'Detalles de la Reserva',
         'reserva_meta_box_callback',
-        'reservas', // Se muestra solo en el CPT reservas
+        'reservas',
         'normal',
         'high'
     );
@@ -102,12 +95,11 @@ add_action( 'add_meta_boxes', 'reservas_add_meta_box' );
 
 /* ── Render del formulario en el Admin ── */
 function reserva_meta_box_callback( $post ) {
-    // Recuperamos los datos actuales
-    $excursion_id = get_post_meta( $post->ID, '_reserva_excursion_id', true );
-    $usuario_id   = get_post_meta( $post->ID, '_reserva_usuario_id', true );
-    $estado       = get_post_meta( $post->ID, '_reserva_estado', true );
+    $excursion_id   = get_post_meta( $post->ID, '_reserva_excursion_id', true );
+    $usuario_id     = get_post_meta( $post->ID, '_reserva_usuario_id', true );
+    $estado         = get_post_meta( $post->ID, '_reserva_estado', true );
+    $parada_autobus = get_post_meta( $post->ID, '_reserva_parada_autobus', true );
 
-    // Obtenemos lista de excursiones y usuarios para los selectores
     $excursiones = get_posts( array( 'post_type' => 'excursiones', 'posts_per_page' => -1 ) );
     $usuarios    = get_users();
 
@@ -137,6 +129,11 @@ function reserva_meta_box_callback( $post ) {
         </p>
 
         <p>
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">🚌 Parada de autobús asignada:</label>
+            <input type="text" readonly value="<?php echo esc_attr($parada_autobus ? $parada_autobus : 'Ninguna seleccionada'); ?>" class="widefat" style="background:#f0f0f0;">
+        </p>
+
+        <p>
             <label style="display:block; margin-bottom:5px; font-weight:bold;">Estado de la reserva:</label>
             <select name="reserva_estado" class="widefat" style="border: 2px solid #0073aa;">
                 <option value="pendiente" <?php selected( $estado, 'pendiente' ); ?>>⏳ Pendiente</option>
@@ -147,7 +144,7 @@ function reserva_meta_box_callback( $post ) {
     </div>
     <?php
 }
-/* ── Guardar los datos cuando el Admin edita la reserva ── */
+
 function reservas_save_meta( $post_id ) {
     if ( ! isset( $_POST['reserva_nonce'] ) || ! wp_verify_nonce( $_POST['reserva_nonce'], 'guardar_detalle_reserva' ) ) return;
     if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
